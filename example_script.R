@@ -116,7 +116,7 @@ dif.numneg <- numneg[1]-numneg[2]
 
    "  
    
-   trend_comp = "trend_comparison.R"
+   trend_comp = "trend_comparison.txt"
 cat(modl,file = trend_comp)   
 
 
