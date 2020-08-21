@@ -1,6 +1,6 @@
 ### example of how to estimate the correlation of a series of estimates of population trends while accounting for the precision of those trend estimates
 
-library(googledrive)
+#library(googledrive)
 library(tidyverse)
 library(jagsUI)
 library(ggmcmc)
@@ -16,12 +16,12 @@ library(ggmcmc)
 
 
 # ### selecting out the stratum-level long-term and short-term trends and the trend-relevant columns
-tr1 = trends %>%
-  filter(Region_type == "stratum", species == "Barn Swallow") %>%
-  select(Trend_Time,Trend, Trend_Q0.025, Trend_Q0.975,Number_of_Routes,Region)
-
-tr1$trend_type = gsub(pattern = "-term",replacement = "",x = tr1$Trend_Time)
-write.csv(tr1,"data/Barn_Swallow_long_and_short_trends.csv")
+# tr1 = trends %>%
+#   filter(Region_type == "stratum", species == "Barn Swallow") %>%
+#   select(Trend_Time,Trend, Trend_Q0.025, Trend_Q0.975,Number_of_Routes,Region)
+# 
+# tr1$trend_type = gsub(pattern = "-term",replacement = "",x = tr1$Trend_Time)
+# write.csv(tr1,"data/Barn_Swallow_long_and_short_trends.csv")
 
 ### this tr1 dataset provides a simple set of trend estimates to be correlated
 ### the model below then estimates the correlation between the short and long-term trends in strata for a single specie
@@ -38,15 +38,24 @@ log_trans <- function(x){
   log((x/100)+1)
 }
 
-CI_p <- 0.95 #95% CI in data, if otherwise, insert the type of CI here (e.g., if 80% CI, CI_p <- 0.8)
-qth <- qnorm(1-((1-CI_p)/2))
+
+# function to transform CI width into variance ----------------------------
+## this function will work with trends on the %-change or log-scale
+CI_to_var <- function(lci, #value of lower credible limit
+                      uci, #value of upper credible limit
+                      CI_p = 0.95){ #95% CI in data, if otherwise, insert the type of CI here (e.g., if 80% CI, CI_p = 0.8)
+   qth <- qnorm(1-((1-CI_p)/2))
+   return(((uci-lci)/(qth*2))^2) #returns the variance
+   
+}
+
 ## transforming the 95% CIs into an estimate of precision (1/variance)
 ##pivoting wider to separate US and Canadian estimates
 ##filtering to species that have estimates for both
    trlong <- tr %>% mutate(betahat = log_trans(Trend),
            log_lci = log_trans(Trend_Q0.025),
            log_uci = log_trans(Trend_Q0.975)) %>%
-    mutate(tau.betahat = 1/(((log_uci-log_lci)/(qth*2))^2)) %>% 
+    mutate(tau.betahat = 1/CI_to_var(lci = log_lci,uci = log_uci)) %>% 
      pivot_wider(id_cols = Region,names_from = trend_type, values_from = c(betahat,tau.betahat) ) %>% 
      filter(.,complete.cases(betahat_Long,betahat_Short))
 
