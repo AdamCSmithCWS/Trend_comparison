@@ -13,6 +13,7 @@ example of a similar model for estimating the correlation between two collection
 
 example_script_correlation.R includes an example of this using Barn Swallow data for short and long-term BBS trends.
 
+Model is modified from the grassland bird model from Link and Barker 2010, pg 90, also described in Sauer and Link 2002, Ecology 83:1743-1751 and includes covariance components and corelation coefficient aspects from Matzke et al. 2017, https://doi.org/10.1525/collabra.78
 
 
 
