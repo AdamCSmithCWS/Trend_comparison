@@ -33,6 +33,9 @@ library(ggmcmc)
 
 tr = read.csv("data/Barn_Swallow_long_and_short_trends.csv")
 
+## tr has all trend estimates in long-form, so long-term stacked with short-term
+## pivot_wider function below separates them into two columns, matched by region
+
 ### funciton to transform %-change trends to log-scale geometric mean rates of change
 log_trans <- function(x){
   log((x/100)+1)
