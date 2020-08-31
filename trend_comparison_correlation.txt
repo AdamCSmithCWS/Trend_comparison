@@ -1,0 +1,47 @@
+
+
+model{
+  
+  for (e in 1:2) {
+    
+    for(s in 1:nstrata) {
+      
+      betahat[s,e] ~ dnorm(beta[s,e],tau.betahat[s,e]) #betahat = data = trend estimates, tau.betahat = data = precision of trend estimate
+      
+    } # end of s loop
+    
+    mu[e] ~ dnorm(0,1) #mean trend for each survey
+  sd.beta[e] <- 1/sqrt(tau.beta[e])
+    
+    
+  } #end of e loop (indexing two models being compared)
+      tau.beta[1] ~ dscaled.gamma(0.001,50) 
+  tau.beta[2] ~ dscaled.gamma(0.01,50) 
+  
+  
+  #### multivariate normal structure for the among-strata between survey variation in trends
+  
+  for(s in 1:nstrata) {
+    
+    beta[s,1:2] ~ dmnorm(mu[1:2],ISigma_cov[1:2,1:2])
+  }
+  
+  rho ~ dunif(-1,1) #estimated Pearson correlation coefficient
+  
+  ### sigma_cov is the covariance matrix
+  Sigma_cov[1,1] <- pow(sd.beta[1],2)
+  Sigma_cov[1,2] <- rho*sd.beta[1]*sd.beta[2]
+  Sigma_cov[2,1] <- rho*sd.beta[1]*sd.beta[2]
+  Sigma_cov[2,2] <- pow(sd.beta[2],2)
+  ISigma_cov[1:2,1:2] <- inverse(Sigma_cov[1:2,1:2])
+  
+  
+  for(s in 1:nstrata) {
+    dif[s] <- beta[s,1]-beta[s,2] # dif is a vector of the strata-specific trend differences after accounting for the imprecision of each estimate's trend and the group (survey/monitoring program) structure
+  } # end of second s-strata loop
+  
+  
+  m.dif <- mean(dif[])
+  
+} # end of model
+
