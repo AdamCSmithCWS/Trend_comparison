@@ -87,6 +87,10 @@ jags_data <- list(nstrata = nstrata,
                   betahat = betahat,
                   tau.betahat = tau.betahat)
 
+M1 = lm(data = sc1,
+        formula = betahat_TRU~betahat_MOD,
+        weights = tau.betahat_MOD)
+
 ### model for comparing trend estimates from two (indexed by e) different analyses, for different regions or strata (indexed by s)
 ### for this comparison, e==1 are estimates from the BBS and e==2 from eBird
 ### Model is modified from the grassland bird model from Link and Barker 2010, pg 90, also described in Sauer and Link 2002, Ecology 83:1743-1751

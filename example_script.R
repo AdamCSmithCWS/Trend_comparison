@@ -106,6 +106,7 @@ difvar[s] <- sd.betahat[s,1]-sd.betahat[s,2] # difvar is a vector of the species
 
 
 m.dif <- mean(dif[])
+pos_m.dif <- step(m.dif) #tracks whether the trend is positive (posterior mean of this value is the probability that m.dif is positive)
 m.difvar <- mean(difvar[])
 
 dif.numpos <- numpos[1]-numpos[2]
@@ -122,7 +123,7 @@ cat(modl,file = trend_comp)
 
 params <- c("m.dif",
             "m.difvar",
-            #"dif",
+            "pos_m.dif",
             #"beta",
             #"difvar",
             "dif.numneg")
@@ -151,6 +152,104 @@ summr = out$summary #table showing a summary of the posterior distribution and s
 
 out_ggs = ggs(out$samples)
 ggmcmc(out_ggs,file = "convergence summaries.pdf", paparam_page = 8)
+
+
+
+# alternative hyperparameter model -------------------------------------------------------------------
+
+modl <- "
+
+### same as above, but assuming that each species trend shares some underlying process that's driving the national trends
+
+model{
+
+for (e in 1:2) {
+
+for(s in 1:nspecies) {
+
+	varhat[s,e] ~ dgamma(p[s,e],lam[s,e]) #varhat = data = variance of trend estimates
+	p[s,e] <- nroutes[s,e] / 2
+	lam[s,e] <- p[s,e] * tau.betahat[s,e]
+	tau.betahat[s,e] ~ dgamma(0.001,0.001)
+	sd.betahat[s,e] <- 1/sqrt(tau.betahat[s,e])
+	### above is prior for the estimated species level precision (tau-betahat), accounting fo rhte number of routes included
+	
+	betahat[s,e] ~ dnorm(beta[s,e],tau.betahat[s,e]) #betahat = data = trend estimates
+	beta[s,e] ~ dnorm(mu[e],tau.beta[e]) #centering each species estimate around the national hyperparameter mu[e], 
+	#### beta is the prior for the estimated species level trend, accounting for the precision
+	
+	 pos[s,e] <- step(beta[s,e]) #tracks whether the trend is positive
+	 neg[s,e] <- 1-pos[s,e] #tracks opposite
+	
+
+} # end of first s-species loop
+  numpos[e] <- sum(pos[,e]) # if pos is tracked, then this estimates the number of species with positive trends
+  numneg[e] <- sum(neg[,e]) # if neg is tracked, same
+
+
+mu[e] ~ dnorm(0,1) #mean national trend hyperparameter
+tau.beta[e] ~ dgamma(0.001,0.001) # precision
+sd.beta[e] <- 1/sqrt(tau.beta[e]) # SD among species in their national trend estimates
+
+
+	} #end of e loop (indexing two models being compared)
+
+### species level differences between US and Canadian trends (US - Canadian)
+### if dif[s] is positive = US trend is more positive than Canadian trend
+for(s in 1:nspecies) {
+dif_s[s] <- beta[s,1]-beta[s,2] # dif is a vector of the species-specific trend differences after accounting for the imprecision of each estimate's trend and the group (survey/monitoring program) structure
+difvar_s[s] <- sd.betahat[s,1]-sd.betahat[s,2] # difvar is a vector of the species-specific differences in sd of the trends
+} # end of second s-species loop
+
+m.dif <- mu[1]-mu[2] #now represents the difference between the hyperparameters
+pos_m.dif <- step(m.dif) #tracks whether the trend is positive (posterior mean of this value is the probability that m.dif is positive)
+
+m.dif_s <- mean(dif_s[]) #species level differences
+m.difvar_s <- mean(difvar_s[])
+
+dif.numpos <- numpos[1]-numpos[2]
+dif.numneg <- numneg[1]-numneg[2]
+
+
+} # end of model
+
+   "  
+
+trend_comp = "trend_comparison_hyperparameters.txt"
+cat(modl,file = trend_comp)   
+
+
+params <- c("m.dif",
+            "m.difvar",
+            "mu",
+            "pos_m.dif",
+            #"difvar",
+            "dif.numneg")
+
+
+burnInSteps = 2000            # Number of steps to "burn-in" the samplers. this is sufficient for testing, but you'll want to increase this
+nChains = 3                   # Number of chains to run.
+numSavedSteps=1000         # Total number of steps in each chain to save. this is sufficient for testing, but you'll want to increase this
+thinSteps=10                   # Number of steps to "thin" (1=keep every step).
+nIter = ceiling( ( (numSavedSteps * thinSteps )+burnInSteps)) # Steps per chain.
+
+
+
+out_hyp = jagsUI(data = jags_data,
+             parameters.to.save = params,
+             n.chains = 3,
+             n.burnin = burnInSteps,
+             n.thin = thinSteps,
+             n.iter = nIter,
+             parallel = T,
+             model.file = trend_comp)
+
+
+
+summr = out$summary #table showing a summary of the posterior distribution and some basic convergence stats for all the monitored parameters
+
+out_ggs = ggs(out$samples)
+ggmcmc(out_ggs,file = "convergence summaries_hyperparameter.pdf", paparam_page = 8)
 
 
 

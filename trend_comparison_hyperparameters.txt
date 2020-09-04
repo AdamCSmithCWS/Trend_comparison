@@ -1,0 +1,57 @@
+
+
+### same as above, but assuming that each species trend shares some underlying process that's driving the national trends
+
+model{
+
+for (e in 1:2) {
+
+for(s in 1:nspecies) {
+
+	varhat[s,e] ~ dgamma(p[s,e],lam[s,e]) #varhat = data = variance of trend estimates
+	p[s,e] <- nroutes[s,e] / 2
+	lam[s,e] <- p[s,e] * tau.betahat[s,e]
+	tau.betahat[s,e] ~ dgamma(0.001,0.001)
+	sd.betahat[s,e] <- 1/sqrt(tau.betahat[s,e])
+	### above is prior for the estimated species level precision (tau-betahat), accounting fo rhte number of routes included
+	
+	betahat[s,e] ~ dnorm(beta[s,e],tau.betahat[s,e]) #betahat = data = trend estimates
+	beta[s,e] ~ dnorm(mu[e],tau.beta[e]) #centering each species estimate around the national hyperparameter mu[e], 
+	#### beta is the prior for the estimated species level trend, accounting for the precision
+	
+	 pos[s,e] <- step(beta[s,e]) #tracks whether the trend is positive
+	 neg[s,e] <- 1-pos[s,e] #tracks opposite
+	
+
+} # end of first s-species loop
+  numpos[e] <- sum(pos[,e]) # if pos is tracked, then this estimates the number of species with positive trends
+  numneg[e] <- sum(neg[,e]) # if neg is tracked, same
+
+
+mu[e] ~ dnorm(0,1) #mean national trend hyperparameter
+tau.beta[e] ~ dgamma(0.001,0.001) # precision
+sd.beta[e] <- 1/sqrt(tau.beta[e]) # SD among species in their national trend estimates
+
+
+	} #end of e loop (indexing two models being compared)
+
+### species level differences between US and Canadian trends (US - Canadian)
+### if dif[s] is positive = US trend is more positive than Canadian trend
+for(s in 1:nspecies) {
+dif_s[s] <- beta[s,1]-beta[s,2] # dif is a vector of the species-specific trend differences after accounting for the imprecision of each estimate's trend and the group (survey/monitoring program) structure
+difvar_s[s] <- sd.betahat[s,1]-sd.betahat[s,2] # difvar is a vector of the species-specific differences in sd of the trends
+} # end of second s-species loop
+
+m.dif <- mu[1]-mu[2] #now represents the difference between the hyperparameters
+pos_m.dif <- step(m.dif) #tracks whether the trend is positive (posterior mean of this value is the probability that m.dif is positive)
+
+m.dif_s <- mean(dif_s[]) #species level differences
+m.difvar_s <- mean(difvar_s[])
+
+dif.numpos <- numpos[1]-numpos[2]
+dif.numneg <- numneg[1]-numneg[2]
+
+
+} # end of model
+
+   
