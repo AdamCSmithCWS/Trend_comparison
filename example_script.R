@@ -179,7 +179,7 @@ species_differences <- summr %>%
   bind_cols(sp_names)
   
   
-
+species_differences
 
 # alternative hyperparameter model -------------------------------------------------------------------
 
@@ -256,7 +256,7 @@ params <- c("m.dif",
 burnInSteps = 20000            # Number of steps to "burn-in" the samplers. this is sufficient for testing, but you'll want to increase this
 nChains = 3                   # Number of chains to run.
 numSavedSteps=1000         # Total number of steps in each chain to save. this is sufficient for testing, but you'll want to increase this
-thinSteps=10                   # Number of steps to "thin" (1=keep every step).
+thinSteps=50                   # Number of steps to "thin" (1=keep every step).
 nIter = ceiling( ( (numSavedSteps * thinSteps )+burnInSteps)) # Steps per chain.
 
 
